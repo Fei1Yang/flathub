@@ -1,0 +1,85 @@
+id: com.genymobile.scrcpy
+
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+
+command: scrcpy.sh
+
+add-extensions:
+  org.freedesktop.Platform.ffmpeg-full:
+    directory: lib/ffmpeg
+    add-ld-path: .
+
+cleanup:
+  - /share/bash-completion
+  - /share/zsh-completion
+cleanup-commands:
+  - mv -f /app/share/icons/hicolor/256x256/apps/scrcpy.png /app/share/icons/hicolor/256x256/apps/com.genymobile.scrcpy.png
+  - mv -f /app/share/applications/scrcpy.desktop /app/share/applications/com.genymobile.scrcpy.desktop
+  - rm -f /app/share/applications/scrcpy-console.desktop
+  - sed -Ei 's#(Exec=).+#\1/app/bin/scrcpy.sh#' /app/share/applications/com.genymobile.scrcpy.desktop
+  - sed -Ei 's#(Icon=).+#\1com.genymobile.scrcpy#' /app/share/applications/com.genymobile.scrcpy.desktop
+
+finish-args:
+  - --device=all
+  - --share=ipc
+  - --share=network
+  - --socket=pulseaudio
+  - --socket=wayland
+  - --socket=x11
+  - --persist=.android
+
+modules:
+  - shared-modules/libusb/libusb.json
+  - name: adb
+    buildsystem: simple
+    build-commands:
+      - install -D adb /app/bin/adb
+    sources:
+      - type: archive
+        url: https://dl.google.com/android/repository/platform-tools_r34.0.4-linux.zip
+        sha256: f2eee6e8220f3dfde6e1acc93c5b25d3d8bd215c0b03585b21665f1ea30d66ba
+        x-checker-data:
+          type: anitya
+          project-id: 226905
+          url-template: 'https://dl.google.com/android/repository/platform-tools_r$version-linux.zip'
+  - name: scrcpy
+    buildsystem: meson
+    config-opts:
+      - --buildtype=release
+      - -Db_lto=true
+      - -Dprebuilt_server=scrcpy-server
+      - --strip
+    sources:
+      - type: archive
+        url: https://github.com/Genymobile/scrcpy/archive/refs/tags/v2.3.1.tar.gz
+        sha256: 76f38779f00d91d0b46a399ebca32c82ff1facdbd843871b7e46c2e7cad38a42
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/Genymobile/scrcpy/releases/latest
+          version-query: .tag_name | sub("v"; "")
+          url-query: '"https://github.com/Genymobile/scrcpy/archive/refs/tags/v" + $version + ".tar.gz"'
+      - type: file
+        url: https://github.com/Genymobile/scrcpy/releases/download/v2.3.1/scrcpy-server-v2.3.1
+        sha256: f6814822fc308a7a532f253485c9038183c6296a6c5df470a9e383b4f8e7605b
+        dest-filename: scrcpy-server
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/Genymobile/scrcpy/releases/latest
+          version-query: .tag_name | sub("v"; "")
+          url-query: '"https://github.com/Genymobile/scrcpy/releases/download/v" + $version + "/scrcpy-server-v" + $version'
+  - name: scrcpy-wrapper
+    buildsystem: simple
+    build-commands:
+      - install -D scrcpy.sh /app/bin/scrcpy.sh
+    sources:
+      - type: file
+        path: scrcpy.sh
+  - name: scrcpy-metadata
+    buildsystem: simple
+    build-commands:
+      - install -D com.genymobile.scrcpy.metainfo.xml /app/share/metainfo/com.genymobile.scrcpy.metainfo.xml
+    sources:
+      - type: file
+        path: com.genymobile.scrcpy.metainfo.xml
