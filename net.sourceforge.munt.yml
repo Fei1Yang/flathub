@@ -1,0 +1,44 @@
+id: net.sourceforge.munt
+
+runtime: org.kde.Platform
+runtime-version: '5.15-23.08'
+sdk: org.kde.Sdk
+
+command: mt32emu-qt
+
+cleanup:
+  - /include
+  - /lib
+  - /share/doc
+cleanup-commands:
+  - mv /app/share/applications/mt32emu-qt.desktop /app/share/applications/net.sourceforge.munt.desktop
+  - find /app/share/icons -name 'munt.png' -exec rename munt net.sourceforge.munt {} \;
+  - sed -Ei 's#(Icon=).+#\1net.sourceforge.munt#' /app/share/applications/net.sourceforge.munt.desktop
+
+finish-args:
+  - --filesystem=xdg-music:ro
+  - --socket=pulseaudio
+  - --socket=wayland
+  - --socket=fallback-x11
+
+modules:
+  - name: munt
+    buildsystem: cmake
+    config-opts:
+      - -DCMAKE_BUILD_TYPE:STRING=Release
+    sources:
+      - type: archive
+        url: https://github.com/munt/munt/archive/refs/tags/munt_2_7_0.tar.gz
+        sha256: 29565cf02a213143d60e6f5c0c992eb80ce6a08874e4cc90456072c8dbcba581
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/munt/munt/tags
+          version-query: .[0].name | sub("munt_"; "")
+          url-query: '"https://github.com/munt/munt/archive/refs/tags/munt_" + $version + ".tar.gz"'
+  - name: munt-metadata
+    buildsystem: simple
+    build-commands:
+      - install -D net.sourceforge.munt.metainfo.xml /app/share/metainfo/net.sourceforge.munt.metainfo.xml
+    sources:
+      - type: file
+        path: net.sourceforge.munt.metainfo.xml
